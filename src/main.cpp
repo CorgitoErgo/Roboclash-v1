@@ -8,6 +8,8 @@ const double TURN_KP = 4.1;
 const double TURN_KI = 0.003;
 const double TURN_KD = 0.001;
 
+
+/*Check definitions header file for port assignments*/
 pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::Motor LEFT_MOTOR_FRONT(LEFT_MOTOR_FRONT_PORT, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Motor RIGHT_MOTOR_FRONT(RIGHT_MOTOR_FRONT_PORT, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
