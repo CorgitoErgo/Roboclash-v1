@@ -1,16 +1,12 @@
 #include "main.h"
 
-bool blueRock = false;
-bool redRock = false;
-bool noColor = true;
+const double FORWARD_KP = 1.9;
+const double FORWARD_KI = 0.001;
+const double FORWARD_KD = 0.00012;
 
-double FORWARD_KP = 1.9;
-double FORWARD_KI = 0.001;
-double FORWARD_KD = 0.00012;
-
-double TURN_KP = 4.1;
-double TURN_KI = 0.003;
-double TURN_KD = 0.001;
+const double TURN_KP = 4.1;
+const double TURN_KI = 0.003;
+const double TURN_KD = 0.001;
 
 pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::Motor LEFT_MOTOR_FRONT(LEFT_MOTOR_FRONT_PORT, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
@@ -152,8 +148,12 @@ void turnPID(double target_degrees, bool turn_left = true) {
 
 void sortingMotor() {
 	int hue_value = 0;
-	optical_sensor.set_integration_time(40); //40ms intervals
-	optical_sensor.set_led_pwm(50); //50% brightness
+	bool blueRock = false;
+	bool redRock = false;
+	bool noColor = true;
+
+	optical_sensor.set_integration_time(40); 	//40ms intervals
+	optical_sensor.set_led_pwm(50); 			//50% brightness
 
 	SORTING_MOTOR.set_zero_position(0);
 	SORTING_MOTOR.tare_position();
