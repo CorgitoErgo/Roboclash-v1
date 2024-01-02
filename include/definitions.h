@@ -14,7 +14,7 @@
 #define OPTICAL_PORT 8
 #define OPTICAL_PORT_UPDATE 20
 
-#define Math_PI 3.141592
+#define Math_PI 3.1415926
 
 const int TICKS_PER_REVOLUTION = 360;
 //const double WHEEL_DIAMETER_CM = 7.0; //when using green tracking wheels

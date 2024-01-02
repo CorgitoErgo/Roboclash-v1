@@ -69,6 +69,7 @@ void forwardPID(double target_cm) {
 		
 		powerLeft = (forward_pid_outputL+correctingLeft)*0.127;
 		powerRight = (forward_pid_outputR+correctingRight)*0.127;
+		
 
 		if(forward==true){
 			LEFT_MOTOR_FRONT.move(powerLeft);
@@ -86,11 +87,20 @@ void forwardPID(double target_cm) {
 		lastErrorRight = errorRight;
 
         if(fabs(errorLeft) <= 5 || fabs(errorRight) <= 5 || currentPositionLeft >= targetLeft || currentPositionRight >= targetRight){
-			LEFT_MOTOR_FRONT.move(0);
-			LEFT_MOTOR_REAR.move(0);
-			RIGHT_MOTOR_FRONT.move(0);
-			RIGHT_MOTOR_REAR.move(0);
-
+			if(forward==true){
+				LEFT_MOTOR_FRONT.move(-2);
+				LEFT_MOTOR_REAR.move(-2);
+				RIGHT_MOTOR_FRONT.move(-2);
+				RIGHT_MOTOR_REAR.move(-2);
+			}
+			else{
+				LEFT_MOTOR_FRONT.move(2);
+				LEFT_MOTOR_REAR.move(2);
+				RIGHT_MOTOR_FRONT.move(2);
+				RIGHT_MOTOR_REAR.move(2);
+			}
+			pros::delay(10);
+			
 			LEFT_MOTOR_FRONT.brake();
 			LEFT_MOTOR_REAR.brake();
 			RIGHT_MOTOR_FRONT.brake();
@@ -105,12 +115,13 @@ void forwardPID(double target_cm) {
 void turnPID(double target_degrees, bool turn_left = true) {
     double error = 0, integral = 0, derivative = 0, lastError = 0, currentRotation = 0;
 	double turn_pid_output = 0;
-	double target = fabs(target_degrees)*3.0;
+	double target = fabs(target_degrees)*2.8;
 
 	LEFT_MOTOR_FRONT.tare_position();
+	RIGHT_MOTOR_FRONT.tare_position();
 
     while (1) {
-        currentRotation = fabs(LEFT_MOTOR_FRONT.get_position());
+        currentRotation = (fabs(LEFT_MOTOR_FRONT.get_position()) + fabs(RIGHT_MOTOR_FRONT.get_position()))/2;
         error = target - currentRotation;
         integral += error;
         derivative = error - lastError;
@@ -132,10 +143,19 @@ void turnPID(double target_degrees, bool turn_left = true) {
         lastError = error;
 
         if (fabs(error) <= 5 || currentRotation >= target) {
-			LEFT_MOTOR_FRONT.move(0);
-			LEFT_MOTOR_REAR.move(0);
-			RIGHT_MOTOR_FRONT.move(0);
-			RIGHT_MOTOR_REAR.move(0);
+			if(turn_left){
+				LEFT_MOTOR_FRONT.move(-2);
+				LEFT_MOTOR_REAR.move(-2);
+				RIGHT_MOTOR_FRONT.move(2);
+				RIGHT_MOTOR_REAR.move(2);
+			}
+			else{
+				LEFT_MOTOR_FRONT.move(2);
+				LEFT_MOTOR_REAR.move(2);
+				RIGHT_MOTOR_FRONT.move(-2);
+				RIGHT_MOTOR_REAR.move(-2);
+			}
+			pros::delay(10);
 
 			LEFT_MOTOR_FRONT.brake();
 			LEFT_MOTOR_REAR.brake();
@@ -162,8 +182,8 @@ void sortingMotor() {
 
 	while (true) {
 		hue_value = optical_sensor.get_hue();
-		if(optical_sensor.get_proximity() > 220){
-			if(hue_value > 210){
+		if(optical_sensor.get_proximity() > 230){
+			if(hue_value > 215 && hue_value < 350){
 				blueRock = true;
 				redRock = false;
 				noColor = false;
@@ -185,22 +205,27 @@ void sortingMotor() {
 			noColor = true;
 		}
 
-		if (blueRock == true && redRock == false) {
-			SORTING_MOTOR.move_absolute(50, 120);
-			pros::delay(500);
+		if (blueRock == true && redRock == false && noColor == false) {
+			SORTING_MOTOR.move_absolute(50, 85);
+			pros::delay(600);
+			blueRock = false;
 		}
-		else if (redRock == true && blueRock == false) {
-			SORTING_MOTOR.move_absolute(-50, 120);
-			pros::delay(500);
+		else if (redRock == true && blueRock == false && noColor == false) {
+			SORTING_MOTOR.move_absolute(-50, 85);
+			pros::delay(600);
+			redRock = false;
 		}
 		else if (blueRock == false && redRock == false && noColor == true){
-			SORTING_MOTOR.move_absolute(0, 140);
-			pros::delay(100);
+			SORTING_MOTOR.move_absolute(0, 150);
+		}
+		else{
+			SORTING_MOTOR.move_absolute(0, 150);
 		}
 
 		if(optical_sensor.get_led_pwm() == 0){
 			optical_sensor.set_led_pwm(50);
 		}
+		pros::delay(2);
 	}
 }
 
@@ -256,10 +281,26 @@ void competition_initialize() {}
  * from where it left off.
  */
 
+
+
 void autonomous() {
+	TOP_ROLLER_MOTOR.move(100);
+	BTM_ROLLER_MOTOR.move(100);
 	forwardPID(40);
-	pros::delay(1000);
+	pros::delay(2);
 	turnPID(90);
+	pros::delay(2);
+	forwardPID(30);
+	pros::delay(2);
+	turnPID(90);
+	pros::delay(2);
+	forwardPID(40);
+	pros::delay(2);
+	turnPID(90);
+	pros::delay(2);
+	forwardPID(30);
+	pros::delay(2);
+	turnPID(90, false);
 	pros::delay(2);
 }
 
@@ -278,8 +319,8 @@ void autonomous() {
  */
 
 void opcontrol() {
-	int powerbtm = 120;
-	int powertop = 120;
+	int powerbtm = 95;
+	int powertop = 95;
 	bool tankdrive = false;
 
 	master.print(2, 0, "%s", "A:tankdrive");
@@ -288,11 +329,13 @@ void opcontrol() {
 		BTM_ROLLER_MOTOR.move((master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2)) * powerbtm);
 		TOP_ROLLER_MOTOR.move((master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2)) * powertop);
 
-		if (master.get_digital_new_press(DIGITAL_DOWN)){
+		if(master.get_digital_new_press(DIGITAL_DOWN)){
 			SORTING_MOTOR.tare_position();
 			SORTING_MOTOR.set_zero_position(0);
 			pros::delay(2);
 		}
+
+		if(master.get_digital_new_press(DIGITAL_UP)) autonomous();
 
 		if(master.get_digital_new_press(DIGITAL_A)) tankdrive = !tankdrive;
 
