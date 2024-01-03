@@ -1,14 +1,5 @@
 #include "main.h"
 
-const double FORWARD_KP = 1.9;
-const double FORWARD_KI = 0.001;
-const double FORWARD_KD = 0.00012;
-
-const double TURN_KP = 4.1;
-const double TURN_KI = 0.003;
-const double TURN_KD = 0.001;
-
-
 /*Check definitions header file for port assignments*/
 pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::Motor LEFT_MOTOR_FRONT(LEFT_MOTOR_FRONT_PORT, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
@@ -19,6 +10,7 @@ pros::Motor SORTING_MOTOR(SORTING_MOTOR_PORT, pros::E_MOTOR_GEARSET_18, false, p
 pros::Motor BTM_ROLLER_MOTOR(BOTTOM_ROLLER_MOTOR_PORT, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Motor TOP_ROLLER_MOTOR(TOP_ROLLER_MOTOR_PORT, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Optical optical_sensor(OPTICAL_PORT, OPTICAL_PORT_UPDATE);
+pros::Imu IMU_SENSOR(IMU_SENSOR_PORT);
 pros::c::optical_rgb_s_t rgb_value;
 
 void forwardPID(double target_cm) {
@@ -28,10 +20,13 @@ void forwardPID(double target_cm) {
 	double forward_pid_outputR = 0;
 	double correctingLeft = 0, correctingRight = 0, deltaMotorError = 0;
 	double powerLeft = 0, powerRight = 0;
-	double correctingGain = 2.2;
+	double correctingGain = 2.1;
+	double offsetPower = 3;
 	double targetLeft = fabs(target_cm) / CM_PER_TICK;
 	double targetRight = fabs(target_cm) / CM_PER_TICK;
 	bool forward = true;
+	bool leftMotorRun = true;
+	bool rightMotorRun = true;
 
 	LEFT_MOTOR_FRONT.tare_position();
 	RIGHT_MOTOR_FRONT.tare_position();
@@ -69,24 +64,66 @@ void forwardPID(double target_cm) {
 		
 		powerLeft = (forward_pid_outputL+correctingLeft)*0.127;
 		powerRight = (forward_pid_outputR+correctingRight)*0.127;
-		
+		printf("\npowLeft:%lf", powerLeft);
+		printf("\npowRight:%lf", powerRight);
 
 		if(forward==true){
-			LEFT_MOTOR_FRONT.move(powerLeft);
-			LEFT_MOTOR_REAR.move(powerLeft);
-			RIGHT_MOTOR_FRONT.move(powerRight);
-			RIGHT_MOTOR_REAR.move(powerRight);
+			if(leftMotorRun == true){
+				LEFT_MOTOR_FRONT.move(powerLeft);
+				LEFT_MOTOR_REAR.move(powerLeft);
+			}
+			else{
+				LEFT_MOTOR_FRONT.move(-1);
+				LEFT_MOTOR_REAR.move(-1);
+			}
+			if(rightMotorRun == true){
+				RIGHT_MOTOR_FRONT.move(powerRight+offsetPower);
+				RIGHT_MOTOR_REAR.move(powerRight+offsetPower);
+			}
+			else{
+				RIGHT_MOTOR_FRONT.move(-1);
+				RIGHT_MOTOR_REAR.move(-1);
+			}
 		}
 		else{
-			LEFT_MOTOR_FRONT.move(-powerLeft);
-			LEFT_MOTOR_REAR.move(-powerLeft);
-			RIGHT_MOTOR_FRONT.move(-powerRight);
-			RIGHT_MOTOR_REAR.move(-powerRight);
+			if(leftMotorRun == true){
+				LEFT_MOTOR_FRONT.move(-powerLeft);
+				LEFT_MOTOR_REAR.move(-powerLeft);
+			}
+			else{
+				LEFT_MOTOR_FRONT.move(1);
+				LEFT_MOTOR_REAR.move(1);
+			}
+			if(rightMotorRun == true){
+				RIGHT_MOTOR_FRONT.move(-powerRight-offsetPower);
+				RIGHT_MOTOR_REAR.move(-powerRight-offsetPower);
+			}
+			else{
+				RIGHT_MOTOR_FRONT.move(1);
+				RIGHT_MOTOR_REAR.move(1);
+			}
 		}
         lastErrorLeft = errorLeft;
 		lastErrorRight = errorRight;
 
-        if(fabs(errorLeft) <= 5 || fabs(errorRight) <= 5 || currentPositionLeft >= targetLeft || currentPositionRight >= targetRight){
+		if(fabs(errorLeft) <= 1.5){
+			LEFT_MOTOR_FRONT.move(0);
+			LEFT_MOTOR_REAR.move(0);
+			LEFT_MOTOR_FRONT.brake();
+			LEFT_MOTOR_REAR.brake();
+			leftMotorRun = false;
+		}
+		if(fabs(errorRight) <= 1.5){
+			RIGHT_MOTOR_FRONT.move(0);
+			RIGHT_MOTOR_REAR.move(0);
+			RIGHT_MOTOR_FRONT.brake();
+			RIGHT_MOTOR_REAR.brake();
+			rightMotorRun = false;
+		}
+		if(rightMotorRun == false && leftMotorRun == false){
+			break;
+		}
+        /*if(fabs(errorLeft) <= 3 || fabs(errorRight) <= 3 || currentPositionLeft >= targetLeft || currentPositionRight >= targetRight){
 			if(forward==true){
 				LEFT_MOTOR_FRONT.move(-2);
 				LEFT_MOTOR_REAR.move(-2);
@@ -106,7 +143,7 @@ void forwardPID(double target_cm) {
 			RIGHT_MOTOR_FRONT.brake();
 			RIGHT_MOTOR_REAR.brake();
             break;
-        }
+        }*/
         pros::delay(2);
     }
 	target_cm = 0;
@@ -114,35 +151,43 @@ void forwardPID(double target_cm) {
 
 void turnPID(double target_degrees, bool turn_left = true) {
     double error = 0, integral = 0, derivative = 0, lastError = 0, currentRotation = 0;
+	double errorHeading = 0, currentHeading = 0;
 	double turn_pid_output = 0;
-	double target = fabs(target_degrees)*2.8;
+	double target = fabs(target_degrees);
+	double offsetPower = 3;
 
 	LEFT_MOTOR_FRONT.tare_position();
 	RIGHT_MOTOR_FRONT.tare_position();
+	IMU_SENSOR.tare_rotation();
 
     while (1) {
         currentRotation = (fabs(LEFT_MOTOR_FRONT.get_position()) + fabs(RIGHT_MOTOR_FRONT.get_position()))/2;
-        error = target - currentRotation;
+		currentHeading = fabs(IMU_SENSOR.get_rotation());
+        error = target - currentHeading;
+		errorHeading = target - currentHeading;
         integral += error;
         derivative = error - lastError;
 
         turn_pid_output = ((TURN_KP * error) + (TURN_KI * integral) + (TURN_KD * derivative))*0.127;
+		printf("\nturn error:%lf", error);
 		
 		if(turn_left==true){
 			LEFT_MOTOR_FRONT.move(-turn_pid_output);
 			LEFT_MOTOR_REAR.move(-turn_pid_output);
-			RIGHT_MOTOR_FRONT.move(turn_pid_output);
-			RIGHT_MOTOR_REAR.move(turn_pid_output);
+			RIGHT_MOTOR_FRONT.move(turn_pid_output+offsetPower);
+			RIGHT_MOTOR_REAR.move(turn_pid_output+offsetPower);
 		}
 		else{
 			LEFT_MOTOR_FRONT.move(turn_pid_output);
 			LEFT_MOTOR_REAR.move(turn_pid_output);
-			RIGHT_MOTOR_FRONT.move(-turn_pid_output);
-			RIGHT_MOTOR_REAR.move(-turn_pid_output);
+			RIGHT_MOTOR_FRONT.move(-turn_pid_output-offsetPower);
+			RIGHT_MOTOR_REAR.move(-turn_pid_output-offsetPower);
 		}
         lastError = error;
+		printf("heading:%lf", currentHeading);
+		printf("rotation:%lf", currentRotation);
 
-        if (fabs(error) <= 5 || currentRotation >= target) {
+        if ((fabs(error) <= 2)) {
 			if(turn_left){
 				LEFT_MOTOR_FRONT.move(-2);
 				LEFT_MOTOR_REAR.move(-2);
@@ -237,6 +282,8 @@ void sortingMotor() {
  */
 void initialize() {
 	optical_sensor.disable_gesture();
+	IMU_SENSOR.reset(true);
+	IMU_SENSOR.set_data_rate(2);
 
 	LEFT_MOTOR_FRONT.set_zero_position(0);
 	LEFT_MOTOR_REAR.set_zero_position(0);
@@ -286,22 +333,22 @@ void competition_initialize() {}
 void autonomous() {
 	TOP_ROLLER_MOTOR.move(100);
 	BTM_ROLLER_MOTOR.move(100);
-	forwardPID(40);
-	pros::delay(2);
-	turnPID(90);
-	pros::delay(2);
 	forwardPID(30);
-	pros::delay(2);
+	pros::delay(5);
 	turnPID(90);
-	pros::delay(2);
-	forwardPID(40);
-	pros::delay(2);
+	pros::delay(5);
+	forwardPID(20);
+	pros::delay(5);
 	turnPID(90);
-	pros::delay(2);
+	pros::delay(5);
 	forwardPID(30);
-	pros::delay(2);
+	pros::delay(5);
+	turnPID(90);
+	pros::delay(5);
+	forwardPID(20);
+	pros::delay(5);
 	turnPID(90, false);
-	pros::delay(2);
+	pros::delay(5);
 }
 
 /**
@@ -340,8 +387,8 @@ void opcontrol() {
 		if(master.get_digital_new_press(DIGITAL_A)) tankdrive = !tankdrive;
 
 		if(!tankdrive){
-			int power = master.get_analog(ANALOG_LEFT_Y);
-			int turn = master.get_analog(ANALOG_RIGHT_X);
+			int power = master.get_analog(ANALOG_LEFT_Y)*0.97;
+			int turn = master.get_analog(ANALOG_RIGHT_X)*0.9;
 			LEFT_MOTOR_FRONT = power + turn;
 			LEFT_MOTOR_REAR = power + turn;
 			RIGHT_MOTOR_FRONT = power - turn;
