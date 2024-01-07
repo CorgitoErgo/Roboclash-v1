@@ -1,4 +1,4 @@
-# USAGE:
+# Usage:
 1. Go to include folder and locate main.h
 2. Below code line 37, uncomment out the line with your robot's color and save the file
 3. Double check Brain's port connections in definitions_(robot color).h
