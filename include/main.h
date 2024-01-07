@@ -37,7 +37,7 @@
 #include "api.h"
 //#include "definitions_orangerobot.h"
 //#include "definitions_pinkrobot.h"
-//#include "definitions_bluerobot.h"
+#include "definitions_bluerobot.h"
 
 /**
  * You should add more #includes here

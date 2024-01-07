@@ -30,9 +30,9 @@ const double TURN_KD = 0.01;
 /*PINK ROBOT PORTS END*/
 
 /*MATHS*/
-#define Math_PI 3
+#define Math_PI 3.1415
 const int TICKS_PER_REVOLUTION = 360;
-const double WHEEL_DIAMETER_CM = 10;
+const double WHEEL_DIAMETER_CM = 10.5;
 const double WHEEL_CIRCUMFERENCE_CM = WHEEL_DIAMETER_CM * Math_PI;
 const double CM_PER_TICK = WHEEL_CIRCUMFERENCE_CM / TICKS_PER_REVOLUTION;
 

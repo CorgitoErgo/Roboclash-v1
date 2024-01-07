@@ -21,8 +21,8 @@ const double TURN_KD = 0.01;
 #define TOP_ROLLER_MOTOR_PORT 13
 #define BOTTOM_ROLLER_MOTOR_PORT 4
 
-#define SORTING_MOTOR_PORT 14
-#define OPTICAL_PORT 16
+#define SORTING_MOTOR_PORT 7
+#define OPTICAL_PORT 8
 #define OPTICAL_PORT_UPDATE 20
 #define IMU_SENSOR_PORT 19
 
@@ -30,9 +30,9 @@ const double TURN_KD = 0.01;
 /*BLUE ROBOT PORTS END*/
 
 /*MATHS*/
-#define Math_PI 3
+#define Math_PI 3.1415
 const int TICKS_PER_REVOLUTION = 360;
-const double WHEEL_DIAMETER_CM = 10;
+const double WHEEL_DIAMETER_CM = 10.5;
 const double WHEEL_CIRCUMFERENCE_CM = WHEEL_DIAMETER_CM * Math_PI;
 const double CM_PER_TICK = WHEEL_CIRCUMFERENCE_CM / TICKS_PER_REVOLUTION;
 
