@@ -1,5 +1,9 @@
 #include "main.h"
 
+bool sorting_enable = true;
+int Top_Roller_State = 3;
+int Btm_Roller_State = 3;
+
 /*Check definitions header file for port assignments*/
 pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::Motor LEFT_MOTOR_FRONT(LEFT_MOTOR_FRONT_PORT, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
@@ -9,196 +13,123 @@ pros::Motor LEFT_MOTOR_REAR(LEFT_MOTOR_REAR_PORT, pros::E_MOTOR_GEARSET_18, fals
 pros::Motor SORTING_MOTOR(SORTING_MOTOR_PORT, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Motor BTM_ROLLER_MOTOR(BOTTOM_ROLLER_MOTOR_PORT, pros::E_MOTOR_GEARSET_36, true, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Motor TOP_ROLLER_MOTOR(TOP_ROLLER_MOTOR_PORT, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
+pros::Motor EVAC_MOTOR(EVAC_MOTOR_PORT, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Optical optical_sensor(OPTICAL_PORT, OPTICAL_PORT_UPDATE);
 pros::Imu IMU_SENSOR(IMU_SENSOR_PORT);
 pros::c::optical_rgb_s_t rgb_value;
 
 void forwardPID(double target_cm) {
-    double errorLeft = 0, integralLeft = 0, derivativeLeft = 0, lastErrorLeft = 0, currentPositionLeft = 0;
-	double forward_pid_outputL = 0;
-	double errorRight = 0, integralRight = 0, derivativeRight = 0, lastErrorRight = 0, currentPositionRight = 0;
-	double forward_pid_outputR = 0;
-	double correctingLeft = 0, correctingRight = 0, deltaMotorError = 0;
-	double powerLeft = 0, powerRight = 0;
-	double correctingGain = 2.1;
-	double offsetPower = 3;
-	double targetLeft = fabs(target_cm) / CM_PER_TICK;
-	double targetRight = fabs(target_cm) / CM_PER_TICK;
+	double currentPositionLeft = 0, currentPositionRight = 0;
+	double error = 0, integral = 0, derivative = 0, lastError = 0, power = 0, currentPosition = 0;
+	double target = fabs(target_cm) / CM_PER_TICK;
+	double correctingPower = 0;
 	bool forward = true;
 	bool leftMotorRun = true;
 	bool rightMotorRun = true;
 
 	LEFT_MOTOR_FRONT.tare_position();
 	RIGHT_MOTOR_FRONT.tare_position();
+	LEFT_MOTOR_REAR.tare_position();
+	RIGHT_MOTOR_REAR.tare_position();
+	IMU_SENSOR.tare();
 
 	if(target_cm<0) forward = false;
 
     while (1) {
-        currentPositionLeft = fabs(LEFT_MOTOR_FRONT.get_position());
-		currentPositionRight = fabs(RIGHT_MOTOR_FRONT.get_position());
-		deltaMotorError = fabs(currentPositionLeft - currentPositionRight);
+        currentPositionLeft = (fabs(LEFT_MOTOR_FRONT.get_position()) + fabs(LEFT_MOTOR_REAR.get_position()))/2;
+		currentPositionRight = (fabs(RIGHT_MOTOR_FRONT.get_position()) + fabs(RIGHT_MOTOR_REAR.get_position()))/2;
+		currentPosition = (currentPositionLeft + currentPositionRight)/2;
+		correctingPower = IMU_SENSOR.get_rotation();
 
-		if(currentPositionLeft > currentPositionRight){
-			correctingRight = deltaMotorError * correctingGain;
-			correctingLeft = -(deltaMotorError * correctingGain);
-		}
-		else if(currentPositionLeft < currentPositionRight){
-			correctingLeft = deltaMotorError * correctingGain;
-			correctingRight = -(deltaMotorError * correctingGain);
-		}
-		else{
-			correctingLeft = 0;
-			correctingRight = 0;
-		}
-        errorLeft = targetLeft - currentPositionLeft;
-		errorRight = targetRight - currentPositionRight;
+		error = target - currentPosition;
 
-        integralLeft += errorLeft;
-		integralRight += errorRight;
+		integral += error;
 
-        derivativeLeft = errorLeft - lastErrorLeft;
-        derivativeRight = errorRight - lastErrorRight;
+		derivative = error - lastError;
 
-        forward_pid_outputL = (FORWARD_KP * errorLeft) + (FORWARD_KI * integralLeft) + (FORWARD_KD * derivativeLeft);
-		forward_pid_outputR = (FORWARD_KP * errorRight) + (FORWARD_KI * integralRight) + (FORWARD_KD * derivativeRight);
-		
-		powerLeft = (forward_pid_outputL+correctingLeft)*0.127;
-		powerRight = (forward_pid_outputR+correctingRight)*0.127;
-		printf("\npowLeft:%lf", powerLeft);
-		printf("\npowRight:%lf", powerRight);
+		power = ((FORWARD_KP * error) + (FORWARD_KI * integral) + (FORWARD_KD * derivative));
 
 		if(forward==true){
-			if(leftMotorRun == true){
-				LEFT_MOTOR_FRONT.move(powerLeft);
-				LEFT_MOTOR_REAR.move(powerLeft);
-			}
-			else{
-				LEFT_MOTOR_FRONT.move(-1);
-				LEFT_MOTOR_REAR.move(-1);
-			}
-			if(rightMotorRun == true){
-				RIGHT_MOTOR_FRONT.move(powerRight+offsetPower);
-				RIGHT_MOTOR_REAR.move(powerRight+offsetPower);
-			}
-			else{
-				RIGHT_MOTOR_FRONT.move(-1);
-				RIGHT_MOTOR_REAR.move(-1);
-			}
+			LEFT_MOTOR_FRONT.move_velocity(power+correctingPower);
+			LEFT_MOTOR_REAR.move_velocity(power+correctingPower);
+			RIGHT_MOTOR_FRONT.move_velocity(power-correctingPower);
+			RIGHT_MOTOR_REAR.move_velocity(power-correctingPower);
 		}
 		else{
-			if(leftMotorRun == true){
-				LEFT_MOTOR_FRONT.move(-powerLeft);
-				LEFT_MOTOR_REAR.move(-powerLeft);
-			}
-			else{
-				LEFT_MOTOR_FRONT.move(1);
-				LEFT_MOTOR_REAR.move(1);
-			}
-			if(rightMotorRun == true){
-				RIGHT_MOTOR_FRONT.move(-powerRight-offsetPower);
-				RIGHT_MOTOR_REAR.move(-powerRight-offsetPower);
-			}
-			else{
-				RIGHT_MOTOR_FRONT.move(1);
-				RIGHT_MOTOR_REAR.move(1);
-			}
+			LEFT_MOTOR_FRONT.move_velocity(-(power+correctingPower));
+			LEFT_MOTOR_REAR.move_velocity(-(power+correctingPower));
+			RIGHT_MOTOR_FRONT.move_velocity(-(power-correctingPower));
+			RIGHT_MOTOR_REAR.move_velocity(-(power-correctingPower));
 		}
-        lastErrorLeft = errorLeft;
-		lastErrorRight = errorRight;
+		lastError = error;
 
-		if(fabs(errorLeft) <= 1.5){
-			LEFT_MOTOR_FRONT.move(0);
-			LEFT_MOTOR_REAR.move(0);
+		if(fabs(error) <= 3 || (currentPositionLeft >= target && currentPositionRight >= target)){
+			LEFT_MOTOR_FRONT.move_velocity(-10);
+			LEFT_MOTOR_REAR.move_velocity(-10);
+			RIGHT_MOTOR_FRONT.move_velocity(-10);
+			RIGHT_MOTOR_REAR.move_velocity(-10);
+			pros::delay(5);
 			LEFT_MOTOR_FRONT.brake();
 			LEFT_MOTOR_REAR.brake();
-			leftMotorRun = false;
-		}
-		if(fabs(errorRight) <= 1.5){
-			RIGHT_MOTOR_FRONT.move(0);
-			RIGHT_MOTOR_REAR.move(0);
 			RIGHT_MOTOR_FRONT.brake();
 			RIGHT_MOTOR_REAR.brake();
-			rightMotorRun = false;
-		}
-		if(rightMotorRun == false && leftMotorRun == false){
 			break;
 		}
-        /*if(fabs(errorLeft) <= 3 || fabs(errorRight) <= 3 || currentPositionLeft >= targetLeft || currentPositionRight >= targetRight){
-			if(forward==true){
-				LEFT_MOTOR_FRONT.move(-2);
-				LEFT_MOTOR_REAR.move(-2);
-				RIGHT_MOTOR_FRONT.move(-2);
-				RIGHT_MOTOR_REAR.move(-2);
-			}
-			else{
-				LEFT_MOTOR_FRONT.move(2);
-				LEFT_MOTOR_REAR.move(2);
-				RIGHT_MOTOR_FRONT.move(2);
-				RIGHT_MOTOR_REAR.move(2);
-			}
-			pros::delay(10);
-			
-			LEFT_MOTOR_FRONT.brake();
-			LEFT_MOTOR_REAR.brake();
-			RIGHT_MOTOR_FRONT.brake();
-			RIGHT_MOTOR_REAR.brake();
-            break;
-        }*/
         pros::delay(2);
     }
+	master.print(0,0,"%lf", currentPositionLeft*CM_PER_TICK);
+	pros::delay(50);
+	master.print(1,0,"%lf", currentPositionRight*CM_PER_TICK);
 	target_cm = 0;
+	pros::delay(100);
 }
 
 void turnPID(double target_degrees, bool turn_left = true) {
     double error = 0, integral = 0, derivative = 0, lastError = 0, currentRotation = 0;
-	double errorHeading = 0, currentHeading = 0;
-	double turn_pid_output = 0;
-	double target = fabs(target_degrees);
-	double offsetPower = 3;
+	double currentHeading = 0;
+	double power = 0;
+	double target = target_degrees;
 
 	LEFT_MOTOR_FRONT.tare_position();
 	RIGHT_MOTOR_FRONT.tare_position();
-	IMU_SENSOR.tare_rotation();
+	LEFT_MOTOR_REAR.tare_position();
+	RIGHT_MOTOR_REAR.tare_position();
+	IMU_SENSOR.tare();
 
     while (1) {
-        currentRotation = (fabs(LEFT_MOTOR_FRONT.get_position()) + fabs(RIGHT_MOTOR_FRONT.get_position()))/2;
 		currentHeading = fabs(IMU_SENSOR.get_rotation());
         error = target - currentHeading;
-		errorHeading = target - currentHeading;
         integral += error;
         derivative = error - lastError;
 
-        turn_pid_output = ((TURN_KP * error) + (TURN_KI * integral) + (TURN_KD * derivative))*0.127;
-		printf("\nturn error:%lf", error);
+        power = (TURN_KP * error) + (TURN_KI * integral) + (TURN_KD * derivative);
 		
 		if(turn_left==true){
-			LEFT_MOTOR_FRONT.move(-turn_pid_output);
-			LEFT_MOTOR_REAR.move(-turn_pid_output);
-			RIGHT_MOTOR_FRONT.move(turn_pid_output+offsetPower);
-			RIGHT_MOTOR_REAR.move(turn_pid_output+offsetPower);
+			LEFT_MOTOR_FRONT.move_velocity(-power);
+			LEFT_MOTOR_REAR.move_velocity(-power);
+			RIGHT_MOTOR_FRONT.move_velocity(power);
+			RIGHT_MOTOR_REAR.move_velocity(power);
 		}
 		else{
-			LEFT_MOTOR_FRONT.move(turn_pid_output);
-			LEFT_MOTOR_REAR.move(turn_pid_output);
-			RIGHT_MOTOR_FRONT.move(-turn_pid_output-offsetPower);
-			RIGHT_MOTOR_REAR.move(-turn_pid_output-offsetPower);
+			LEFT_MOTOR_FRONT.move_velocity(power);
+			LEFT_MOTOR_REAR.move_velocity(power);
+			RIGHT_MOTOR_FRONT.move_velocity(-power);
+			RIGHT_MOTOR_REAR.move_velocity(-power);
 		}
         lastError = error;
-		printf("heading:%lf", currentHeading);
-		printf("rotation:%lf", currentRotation);
 
-        if ((fabs(error) <= 2)) {
+        if ((fabs(error) <= 2) || currentHeading >= target) {
 			if(turn_left){
-				LEFT_MOTOR_FRONT.move(-2);
-				LEFT_MOTOR_REAR.move(-2);
-				RIGHT_MOTOR_FRONT.move(2);
-				RIGHT_MOTOR_REAR.move(2);
+				LEFT_MOTOR_FRONT.move_velocity(-2);
+				LEFT_MOTOR_REAR.move_velocity(-2);
+				RIGHT_MOTOR_FRONT.move_velocity(2);
+				RIGHT_MOTOR_REAR.move_velocity(2);
 			}
 			else{
-				LEFT_MOTOR_FRONT.move(2);
-				LEFT_MOTOR_REAR.move(2);
-				RIGHT_MOTOR_FRONT.move(-2);
-				RIGHT_MOTOR_REAR.move(-2);
+				LEFT_MOTOR_FRONT.move_velocity(2);
+				LEFT_MOTOR_REAR.move_velocity(2);
+				RIGHT_MOTOR_FRONT.move_velocity(-2);
+				RIGHT_MOTOR_REAR.move_velocity(-2);
 			}
 			pros::delay(10);
 
@@ -208,69 +139,159 @@ void turnPID(double target_degrees, bool turn_left = true) {
 			RIGHT_MOTOR_REAR.brake();
             break;
         }
-        pros::delay(2);
+        pros::delay(10);
     }
+	master.print(2,0,"%lf", currentHeading);
 	target_degrees = 0;
+	pros::delay(100);
 }
 
-void sortingMotor() {
+void sortingTask() {
 	int hue_value = 0;
 	bool blueRock = false;
 	bool redRock = false;
 	bool noColor = true;
 
-	optical_sensor.set_integration_time(40); 	//40ms intervals
-	optical_sensor.set_led_pwm(50); 			//50% brightness
+	optical_sensor.set_integration_time(40);
+	optical_sensor.set_led_pwm(50);
 
 	SORTING_MOTOR.set_zero_position(0);
 	SORTING_MOTOR.tare_position();
 
 	while (true) {
-		hue_value = optical_sensor.get_hue();
-		if(optical_sensor.get_proximity() > 230){
-			if(hue_value > 215 && hue_value < 350){
-				blueRock = true;
-				redRock = false;
-				noColor = false;
-			}
-			else if(hue_value < 6){
-				redRock = true;
-				blueRock = false;
-				noColor = false;
+		/*RED ALLIANCE
+		if(sorting_enable==true){
+			hue_value = optical_sensor.get_hue();
+			if(optical_sensor.get_proximity() > 230){
+				if(hue_value > 215 && hue_value < 350){
+					blueRock = true;
+					redRock = false;
+					noColor = false;
+				}
+				else if(hue_value < 6){
+					redRock = true;
+					blueRock = false;
+					noColor = false;
+				}
+				else{
+					redRock = false;
+					blueRock = false;
+					noColor = true;
+				}
 			}
 			else{
 				redRock = false;
 				blueRock = false;
 				noColor = true;
 			}
+
+			if (blueRock == true && redRock == false && noColor == false) {
+				SORTING_MOTOR.move_absolute(50, 85);
+				pros::delay(600);
+				blueRock = false;
+			}
+			else if (redRock == true && blueRock == false && noColor == false) {
+				SORTING_MOTOR.move_absolute(-50, 85);
+				pros::delay(600);
+				redRock = false;
+			}
+			else if (blueRock == false && redRock == false && noColor == true){
+				SORTING_MOTOR.move_absolute(0, 150);
+			}
+			else{
+				SORTING_MOTOR.move_absolute(0, 150);
+			}
+			if(optical_sensor.get_led_pwm()==0) optical_sensor.set_led_pwm(50);
+			pros::delay(2);
+		}*/
+
+		/*BLUE ALLIANCE*/
+		if(sorting_enable==true){
+			hue_value = optical_sensor.get_hue();
+			if(optical_sensor.get_proximity() > 230){
+				if(hue_value > 215 && hue_value < 350){
+					blueRock = true;
+					redRock = false;
+					noColor = false;
+				}
+				else if(hue_value < 6){
+					redRock = true;
+					blueRock = false;
+					noColor = false;
+				}
+				else{
+					redRock = false;
+					blueRock = false;
+					noColor = true;
+				}
+			}
+			else{
+				redRock = false;
+				blueRock = false;
+				noColor = true;
+			}
+
+			if (blueRock == true && redRock == false && noColor == false) {
+				SORTING_MOTOR.move_absolute(-50, 85);
+				pros::delay(600);
+				blueRock = false;
+			}
+			else if (redRock == true && blueRock == false && noColor == false) {
+				SORTING_MOTOR.move_absolute(50, 85);
+				pros::delay(600);
+				redRock = false;
+			}
+			else if (blueRock == false && redRock == false && noColor == true){
+				SORTING_MOTOR.move_absolute(0, 150);
+			}
+			else{
+				SORTING_MOTOR.move_absolute(0, 150);
+			}
+			if(optical_sensor.get_led_pwm()==0) optical_sensor.set_led_pwm(50);
+			pros::delay(2);
 		}
 		else{
-			redRock = false;
-			blueRock = false;
-			noColor = true;
+			pros::delay(2);
+			if(optical_sensor.get_led_pwm() == 50){
+				optical_sensor.set_led_pwm(0);
+				SORTING_MOTOR.move_absolute(0, 150);
+			}
 		}
+	}
+}
 
-		if (blueRock == true && redRock == false && noColor == false) {
-			SORTING_MOTOR.move_absolute(50, 85);
-			pros::delay(600);
-			blueRock = false;
+void rollerTask(){
+	while(1){
+		switch(Top_Roller_State){
+			case 1:
+				TOP_ROLLER_MOTOR.move(95);
+				break;
+			case -1:
+				TOP_ROLLER_MOTOR.move(-95);
+				break;
+			case 0:
+				TOP_ROLLER_MOTOR.move(0);
+				break;
+			default:
+				break;
 		}
-		else if (redRock == true && blueRock == false && noColor == false) {
-			SORTING_MOTOR.move_absolute(-50, 85);
-			pros::delay(600);
-			redRock = false;
+		switch(Btm_Roller_State){
+			case 1: 
+				BTM_ROLLER_MOTOR.move(95);
+				break;
+			case -1: 
+				BTM_ROLLER_MOTOR.move(-95);
+				break;
+			case 0: 
+				BTM_ROLLER_MOTOR.move(0);
+				break;
+			default:
+				break;
 		}
-		else if (blueRock == false && redRock == false && noColor == true){
-			SORTING_MOTOR.move_absolute(0, 150);
+		pros::delay(10);
+		if(TOP_ROLLER_MOTOR.get_torque() >= 1.05){
+			Top_Roller_State = -1;
 		}
-		else{
-			SORTING_MOTOR.move_absolute(0, 150);
-		}
-
-		if(optical_sensor.get_led_pwm() == 0){
-			optical_sensor.set_led_pwm(50);
-		}
-		pros::delay(2);
 	}
 }
 
@@ -283,19 +304,21 @@ void sortingMotor() {
 void initialize() {
 	optical_sensor.disable_gesture();
 	IMU_SENSOR.reset(true);
-	IMU_SENSOR.set_data_rate(2);
+	IMU_SENSOR.set_data_rate(10);
 
 	LEFT_MOTOR_FRONT.set_zero_position(0);
 	LEFT_MOTOR_REAR.set_zero_position(0);
 	RIGHT_MOTOR_FRONT.set_zero_position(0);
 	RIGHT_MOTOR_REAR.set_zero_position(0);
 
-	LEFT_MOTOR_FRONT.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	LEFT_MOTOR_REAR.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	RIGHT_MOTOR_FRONT.set_brake_mode(MOTOR_BRAKE_BRAKE);
-	RIGHT_MOTOR_REAR.set_brake_mode(MOTOR_BRAKE_BRAKE);
+	LEFT_MOTOR_FRONT.set_brake_mode(MOTOR_BRAKE_HOLD);
+	LEFT_MOTOR_REAR.set_brake_mode(MOTOR_BRAKE_HOLD);
+	RIGHT_MOTOR_FRONT.set_brake_mode(MOTOR_BRAKE_HOLD);
+	RIGHT_MOTOR_REAR.set_brake_mode(MOTOR_BRAKE_HOLD);
 
-	pros::Task sorting(sortingMotor);
+	pros::Task sorting(sortingTask);
+	pros::Task roller(rollerTask);
+	master.clear();
 }
 
 /**
@@ -328,27 +351,17 @@ void competition_initialize() {}
  * from where it left off.
  */
 
-
-
 void autonomous() {
-	TOP_ROLLER_MOTOR.move(100);
-	BTM_ROLLER_MOTOR.move(100);
-	forwardPID(30);
+	IMU_SENSOR.reset(true);
+	IMU_SENSOR.set_data_rate(10);
+	Top_Roller_State = 1;
+	Btm_Roller_State = 0;
+	forwardPID(100);
 	pros::delay(5);
 	turnPID(90);
 	pros::delay(5);
-	forwardPID(20);
-	pros::delay(5);
-	turnPID(90);
-	pros::delay(5);
-	forwardPID(30);
-	pros::delay(5);
-	turnPID(90);
-	pros::delay(5);
-	forwardPID(20);
-	pros::delay(5);
-	turnPID(90, false);
-	pros::delay(5);
+	turnPID(180);
+	IMU_SENSOR.reset(true);
 }
 
 /**
@@ -366,33 +379,31 @@ void autonomous() {
  */
 
 void opcontrol() {
-	int powerbtm = 95;
-	int powertop = 95;
+	int powerbtm = 90;
+	int powertop = 90;
+	int powerevac = 95;
+	int powersorting = 50;
 	bool tankdrive = false;
 
-	master.print(2, 0, "%s", "A:tankdrive");
-
 	while (true) {
-		BTM_ROLLER_MOTOR.move((master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2)) * powerbtm);
-		TOP_ROLLER_MOTOR.move((master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2)) * powertop);
+		//BTM_ROLLER_MOTOR.move((master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2)) * powerbtm);
+		//TOP_ROLLER_MOTOR.move((master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2)) * powertop);
+		Top_Roller_State = (master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2));
+		Btm_Roller_State = (master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2));
+		EVAC_MOTOR.move((master.get_digital(DIGITAL_UP) - master.get_digital(DIGITAL_DOWN)) * powerevac);
 
-		if(master.get_digital_new_press(DIGITAL_DOWN)){
-			SORTING_MOTOR.tare_position();
-			SORTING_MOTOR.set_zero_position(0);
-			pros::delay(2);
-		}
+		if(master.get_digital_new_press(DIGITAL_B)) sorting_enable = !sorting_enable;
 
-		if(master.get_digital_new_press(DIGITAL_UP)) autonomous();
+		if(master.get_digital_new_press(DIGITAL_Y)) autonomous();
 
 		if(master.get_digital_new_press(DIGITAL_A)) tankdrive = !tankdrive;
-
 		if(!tankdrive){
-			int power = master.get_analog(ANALOG_LEFT_Y)*0.97;
-			int turn = master.get_analog(ANALOG_RIGHT_X)*0.9;
-			LEFT_MOTOR_FRONT = power + turn;
-			LEFT_MOTOR_REAR = power + turn;
-			RIGHT_MOTOR_FRONT = power - turn;
-			RIGHT_MOTOR_REAR = power - turn;
+			int power = master.get_analog(ANALOG_LEFT_Y);
+			int turn = master.get_analog(ANALOG_RIGHT_X);
+			LEFT_MOTOR_FRONT.move_velocity(power + turn);
+			LEFT_MOTOR_REAR.move_velocity(power + turn);
+			RIGHT_MOTOR_FRONT.move_velocity(power - turn);
+			RIGHT_MOTOR_REAR.move_velocity(power - turn);
 		}
 		else{
 			int powerLeft = master.get_analog(ANALOG_LEFT_Y);
