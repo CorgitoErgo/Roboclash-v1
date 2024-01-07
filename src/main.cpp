@@ -3,6 +3,7 @@
 bool sorting_enable = true;
 int Top_Roller_State = 3;
 int Btm_Roller_State = 3;
+double imu_error = 0;
 
 /*Check definitions header file for port assignments*/
 pros::Controller master(pros::E_CONTROLLER_MASTER);
@@ -95,10 +96,11 @@ void turnPID(double target_degrees, bool turn_left = true) {
 	LEFT_MOTOR_REAR.tare_position();
 	RIGHT_MOTOR_REAR.tare_position();
 	IMU_SENSOR.tare();
+	imu_error = IMU_SENSOR.get_rotation();
 
     while (1) {
 		currentHeading = fabs(IMU_SENSOR.get_rotation());
-        error = target - currentHeading;
+        error = target - currentHeading - imu_error;
         integral += error;
         derivative = error - lastError;
 
@@ -118,8 +120,8 @@ void turnPID(double target_degrees, bool turn_left = true) {
 		}
         lastError = error;
 
-        if ((fabs(error) <= 2) || currentHeading >= target) {
-			if(turn_left){
+        if ((fabs(error) <= 0.01) || currentHeading >= target) {
+			/*if(turn_left){
 				LEFT_MOTOR_FRONT.move_velocity(-2);
 				LEFT_MOTOR_REAR.move_velocity(-2);
 				RIGHT_MOTOR_FRONT.move_velocity(2);
@@ -131,7 +133,7 @@ void turnPID(double target_degrees, bool turn_left = true) {
 				RIGHT_MOTOR_FRONT.move_velocity(-2);
 				RIGHT_MOTOR_REAR.move_velocity(-2);
 			}
-			pros::delay(10);
+			pros::delay(10);*/
 
 			LEFT_MOTOR_FRONT.brake();
 			LEFT_MOTOR_REAR.brake();
@@ -289,8 +291,10 @@ void rollerTask(){
 				break;
 		}
 		pros::delay(10);
-		if(TOP_ROLLER_MOTOR.get_torque() >= 1.05){
-			Top_Roller_State = -1;
+		//printf("\n%lf", TOP_ROLLER_MOTOR.get_torque());
+		if(TOP_ROLLER_MOTOR.get_torque() >= 1.05 && TOP_ROLLER_MOTOR.get_actual_velocity() == 0){
+			TOP_ROLLER_MOTOR.move(-95);
+			pros::delay(800);
 		}
 	}
 }
@@ -355,12 +359,37 @@ void autonomous() {
 	IMU_SENSOR.reset(true);
 	IMU_SENSOR.set_data_rate(10);
 	Top_Roller_State = 1;
-	Btm_Roller_State = 0;
-	forwardPID(100);
+	Btm_Roller_State = 1;
+	/*forwardPID(400);
 	pros::delay(5);
 	turnPID(90);
 	pros::delay(5);
-	turnPID(180);
+	forwardPID(20);
+	pros::delay(5);
+	turnPID(90);
+	pros::delay(5);
+	forwardPID(400);
+	pros::delay(5);
+	turnPID(90, false);
+	pros::delay(5);
+	forwardPID(20);
+	pros::delay(5);
+	turnPID(90, false);
+	pros::delay(5);
+	forwardPID(350);
+	pros::delay(5);
+	turnPID(90);
+	pros::delay(5);
+	forwardPID(150);
+	pros::delay(5);
+	turnPID(90);
+	pros::delay(5);
+	forwardPID(300);
+	pros::delay(5);*/
+	turnPID(87.5);
+	turnPID(87.5);
+	turnPID(87.5);
+	turnPID(87.5);
 	IMU_SENSOR.reset(true);
 }
 
@@ -388,8 +417,8 @@ void opcontrol() {
 	while (true) {
 		//BTM_ROLLER_MOTOR.move((master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2)) * powerbtm);
 		//TOP_ROLLER_MOTOR.move((master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2)) * powertop);
-		Top_Roller_State = (master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2));
-		Btm_Roller_State = (master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2));
+		Top_Roller_State = (master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2));
+		Btm_Roller_State = (master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2));
 		EVAC_MOTOR.move((master.get_digital(DIGITAL_UP) - master.get_digital(DIGITAL_DOWN)) * powerevac);
 
 		if(master.get_digital_new_press(DIGITAL_B)) sorting_enable = !sorting_enable;
@@ -400,10 +429,10 @@ void opcontrol() {
 		if(!tankdrive){
 			int power = master.get_analog(ANALOG_LEFT_Y);
 			int turn = master.get_analog(ANALOG_RIGHT_X);
-			LEFT_MOTOR_FRONT.move_velocity(power + turn);
-			LEFT_MOTOR_REAR.move_velocity(power + turn);
-			RIGHT_MOTOR_FRONT.move_velocity(power - turn);
-			RIGHT_MOTOR_REAR.move_velocity(power - turn);
+			LEFT_MOTOR_FRONT.move(power + turn);
+			LEFT_MOTOR_REAR.move(power + turn);
+			RIGHT_MOTOR_FRONT.move(power - turn);
+			RIGHT_MOTOR_REAR.move(power - turn);
 		}
 		else{
 			int powerLeft = master.get_analog(ANALOG_LEFT_Y);
