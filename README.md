@@ -8,8 +8,8 @@
    * Blue robot: 87.5
    * Pink robot: (untested)
 # Controls:
-   * Large rock intake - **R1/R2** for up/down motion
-   * Small rock intake - **L1/L2** for in/out motion
+   * **R1/R2** - Up/Down motion for Large rock intake
+   * **L1/L2** - In/Out motion for Small rock intake
    * **A** - Toggle TankDrive
    * **B** - Toggle Sorting sensor and motor
    * **Y** - Autonomous movement
