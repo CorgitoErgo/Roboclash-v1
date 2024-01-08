@@ -332,10 +332,10 @@ void rollerTask(){
 		}
 		pros::delay(10);
 		//printf("\n%lf", TOP_ROLLER_MOTOR.get_torque());
-		if(TOP_ROLLER_MOTOR.get_torque() >= 1.05 && TOP_ROLLER_MOTOR.get_actual_velocity() == 0){
-			TOP_ROLLER_MOTOR.move(-95);
-			pros::delay(500);
-		}
+		//if(TOP_ROLLER_MOTOR.get_torque() >= 1.05 && TOP_ROLLER_MOTOR.get_actual_velocity() == 0){
+		//	TOP_ROLLER_MOTOR.move(-95);
+		//	pros::delay(500);
+		//}
 	}
 }
 
@@ -396,8 +396,8 @@ void competition_initialize() {}
 
 void moveAbsolute(double distance_cm, int vel){
 	double target_distance = distance_cm/CM_PER_TICK;
-	//double offsetvel = 1.5; bluerobot
-	double offsetvel = 0.981;
+	double offsetvel = 0.982; //blue robot
+	//double offsetvel = 0.981; //orange robot
 	LEFT_MOTOR_FRONT.tare_position();
 	RIGHT_MOTOR_FRONT.tare_position();
 	LEFT_MOTOR_REAR.tare_position();
@@ -426,10 +426,13 @@ void moveAbsolute(double distance_cm, int vel){
 void autonomous() {
 	//IMU_SENSOR.reset(true);
 	//IMU_SENSOR.set_data_rate(10);
-	Top_Roller_State = 1;
-	Btm_Roller_State = 1;
+	//Top_Roller_State = 1;
+	//Btm_Roller_State = 1;
 	/*BLUE ALLIANCE*/
-	moveAbsolute(300, 90);
+	/*COMPLEX ROUTE*/
+	/*Top_Roller_State = 1;
+	Btm_Roller_State = 1;
+	/*moveAbsolute(300, 90);
 	pros::delay(1000);
 	turnPID(86);
 	pros::delay(800);
@@ -520,7 +523,39 @@ void autonomous() {
 	pros::delay(500);
 	EVAC_MOTOR.move(0);
 	Top_Roller_State = 0;
+	Btm_Roller_State = 0;*/
+
+	/*SIMPLE SCORE*/
+	Top_Roller_State = 0;
 	Btm_Roller_State = 0;
+	LEFT_MOTOR_FRONT.move(-124);
+	LEFT_MOTOR_REAR.move(-124);
+	RIGHT_MOTOR_FRONT.move(-118);
+	RIGHT_MOTOR_REAR.move(-118);
+	pros::delay(6000);
+	LEFT_MOTOR_FRONT.move(0);
+	LEFT_MOTOR_REAR.move(0);
+	RIGHT_MOTOR_FRONT.move(0);
+	RIGHT_MOTOR_REAR.move(0);
+	//Top_Roller_State = 1;
+	//Btm_Roller_State = 1;
+	pros::delay(900);
+	moveAbsolute(25, 90);
+	pros::delay(1000);
+	turnPID(88.5);
+	pros::delay(1000);
+	LEFT_MOTOR_FRONT.move(-124);
+	LEFT_MOTOR_REAR.move(-124);
+	RIGHT_MOTOR_FRONT.move(-117);
+	RIGHT_MOTOR_REAR.move(-118);
+	pros::delay(3000);
+	LEFT_MOTOR_FRONT.move(0);
+	LEFT_MOTOR_REAR.move(0);
+	RIGHT_MOTOR_FRONT.move(0);
+	RIGHT_MOTOR_REAR.move(0);
+	pros::delay(1000);
+	/*SIMPLE SCORE
+	*/
 	//moveAbsolute(-210, -170);
 	//turnPID(85.5);
 	IMU_SENSOR.reset(true);
