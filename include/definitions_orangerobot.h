@@ -6,6 +6,10 @@ const double FORWARD_KP = 0.61;
 const double FORWARD_KI = 0;
 const double FORWARD_KD = 0.5;
 
+const double FORWARD_KPR = 0.6;
+const double FORWARD_KIR = 0;
+const double FORWARD_KDR = 0.21;
+
 const double TURN_KP = 0.4;
 const double TURN_KI = 0.0015;
 const double TURN_KD = 0.01;
@@ -21,9 +25,9 @@ const double TURN_KD = 0.01;
 #define TOP_ROLLER_MOTOR_PORT 12
 #define BOTTOM_ROLLER_MOTOR_PORT 2
 
-#define SORTING_MOTOR_PORT 13
+#define SORTING_MOTOR_PORT 14
 #define OPTICAL_PORT 15
-#define OPTICAL_PORT_UPDATE 20
+#define OPTICAL_PORT_UPDATE 40
 #define IMU_SENSOR_PORT 17
 
 #define EVAC_MOTOR_PORT 3

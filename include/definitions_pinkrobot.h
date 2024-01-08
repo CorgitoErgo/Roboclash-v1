@@ -6,6 +6,10 @@ const double FORWARD_KP = 0.61;
 const double FORWARD_KI = 0;
 const double FORWARD_KD = 0.5;
 
+const double FORWARD_KPR = 0.6;
+const double FORWARD_KIR = 0;
+const double FORWARD_KDR = 0.21;
+
 const double TURN_KP = 0.4;
 const double TURN_KI = 0.0015;
 const double TURN_KD = 0.01;
@@ -13,20 +17,20 @@ const double TURN_KD = 0.01;
 
 /*PINK ROBOT PORTS START*/
 #define LEFT_MOTOR_FRONT_PORT 12
-#define LEFT_MOTOR_REAR_PORT 20
+#define LEFT_MOTOR_REAR_PORT 3
 
-#define RIGHT_MOTOR_FRONT_PORT 3
+#define RIGHT_MOTOR_FRONT_PORT 1
 #define RIGHT_MOTOR_REAR_PORT 10
 
-#define TOP_ROLLER_MOTOR_PORT 13
-#define BOTTOM_ROLLER_MOTOR_PORT 4
+#define TOP_ROLLER_MOTOR_PORT 11
+#define BOTTOM_ROLLER_MOTOR_PORT 5
 
-#define SORTING_MOTOR_PORT 14
-#define OPTICAL_PORT 16
-#define OPTICAL_PORT_UPDATE 20
-#define IMU_SENSOR_PORT 19
+#define SORTING_MOTOR_PORT 13
+#define OPTICAL_PORT 14
+#define OPTICAL_PORT_UPDATE 40
+#define IMU_SENSOR_PORT 18
 
-#define EVAC_MOTOR_PORT 15
+#define EVAC_MOTOR_PORT 20
 /*PINK ROBOT PORTS END*/
 
 /*MATHS*/

@@ -2,9 +2,13 @@
 #define _DEFINITIONS_BLUE_H
 
 /*BLUE ROBOT PID START*/
-const double FORWARD_KP = 0.61;
+const double FORWARD_KP = 0.8;
 const double FORWARD_KI = 0;
-const double FORWARD_KD = 0.5;
+const double FORWARD_KD = 0.2;
+
+const double FORWARD_KPR = 0.6;
+const double FORWARD_KIR = 0;
+const double FORWARD_KDR = 0.21;
 
 const double TURN_KP = 0.4;
 const double TURN_KI = 0.0015;
@@ -21,12 +25,12 @@ const double TURN_KD = 0.01;
 #define TOP_ROLLER_MOTOR_PORT 13
 #define BOTTOM_ROLLER_MOTOR_PORT 4
 
-#define SORTING_MOTOR_PORT 7
-#define OPTICAL_PORT 8
-#define OPTICAL_PORT_UPDATE 20
-#define IMU_SENSOR_PORT 19
+#define SORTING_MOTOR_PORT 8
+#define OPTICAL_PORT 7
+#define OPTICAL_PORT_UPDATE 40
+#define IMU_SENSOR_PORT 14
 
-#define EVAC_MOTOR_PORT 15
+#define EVAC_MOTOR_PORT 16
 /*BLUE ROBOT PORTS END*/
 
 /*MATHS*/
