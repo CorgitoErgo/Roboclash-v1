@@ -153,6 +153,14 @@ void rollerTask(){
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
+	pros::lcd::initialize();
+	pros::lcd::set_text(0, "[Suckers gonna Suck]");
+	pros::lcd::set_text(1, "1. John Chai");
+	pros::lcd::set_text(2, "2. Nawawi");
+	pros::lcd::set_text(3, "3. Cheng Yi");
+	pros::lcd::set_text(4, "4. Hans");
+	pros::lcd::set_background_color(0,128,128);
+	pros::lcd::set_text_color(LV_COLOR_BLACK);
 	OPTICAL_SENSOR.disable_gesture();
 
 	LEFT_MOTOR_FRONT.set_zero_position(0);
