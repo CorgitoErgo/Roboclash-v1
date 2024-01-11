@@ -253,6 +253,7 @@ void opcontrol() {
 			}
 			else OPTICAL_SENSOR.set_led_pwm(0);
 			master.print(2,0,"[Sort: %s]", sorting_enable ? "On ":"Off");
+			pros::delay(2);
 		}
 
 		if(master.get_digital_new_press(DIGITAL_Y)){
