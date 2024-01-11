@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "Suckers gonna Suck",
+    "project_name": "Players gonna Play",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -312,7 +312,7 @@
       "slot": 1,
       "icon": "X",
       "after": "screen",
-      "description": "RoboClash_Team_3"
+      "description": "RoboClash_Team_2"
     }
   }
 }
