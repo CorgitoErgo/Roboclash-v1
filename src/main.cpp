@@ -4,7 +4,6 @@ bool sorting_enable = true;
 bool blue_alliance = true;
 int Top_Roller_State = 3;
 int Btm_Roller_State = 3;
-double imu_error = 0;
 
 /*Check definitions header file for port assignments*/
 pros::Controller master(pros::E_CONTROLLER_MASTER);
@@ -17,7 +16,6 @@ pros::Motor BTM_ROLLER_MOTOR(BOTTOM_ROLLER_MOTOR_PORT, pros::E_MOTOR_GEARSET_36,
 pros::Motor TOP_ROLLER_MOTOR(TOP_ROLLER_MOTOR_PORT, pros::E_MOTOR_GEARSET_36, false, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Motor EVAC_MOTOR(EVAC_MOTOR_PORT, pros::E_MOTOR_GEARSET_18, false, pros::E_MOTOR_ENCODER_DEGREES);
 pros::Optical OPTICAL_SENSOR(OPTICAL_PORT, OPTICAL_PORT_UPDATE);
-pros::Imu IMU_SENSOR(IMU_SENSOR_PORT);
 pros::c::optical_rgb_s_t rgb_value;
 
 double hue_value = 0;
@@ -38,12 +36,12 @@ void sortingTask() {
 			if(OPTICAL_SENSOR.get_led_pwm() == 0) OPTICAL_SENSOR.set_led_pwm(50);
 			hue_value = OPTICAL_SENSOR.get_hue();
 			proximity = OPTICAL_SENSOR.get_proximity();
-			if(hue_value > 220 && hue_value < 245 && proximity >= 225){
+			if(hue_value > 220 && hue_value < 245 && proximity >= 230){
 				blueRock = true;
 				redRock = false;
 				noColor = false;
 			}
-			else if(hue_value < 11 && proximity >= 225){
+			else if(hue_value < 11 && proximity >= 230){
 				redRock = true;
 				blueRock = false;
 				noColor = false;
@@ -57,14 +55,14 @@ void sortingTask() {
 			if(blue_alliance == true){
 				if(blueRock == true){
 					blueRock = false;
-					SORTING_MOTOR.move_absolute(-55, 100);
+					SORTING_MOTOR.move_absolute(-50, 95);
 					pros::delay(600);
 					SORTING_MOTOR.move_absolute(0, 130);
 					pros::delay(200);
 				}
 				else if(redRock == true){
 					redRock = false;
-					SORTING_MOTOR.move_absolute(55, 100);
+					SORTING_MOTOR.move_absolute(50, 95);
 					pros::delay(600);
 					SORTING_MOTOR.move_absolute(0, 130);
 					pros::delay(200);
@@ -80,14 +78,14 @@ void sortingTask() {
 			else{
 				if(blueRock == true){
 					blueRock = false;
-					SORTING_MOTOR.move_absolute(55, 100);
+					SORTING_MOTOR.move_absolute(50, 95);
 					pros::delay(600);
 					SORTING_MOTOR.move_absolute(0, 130);
 					pros::delay(200);
 				}
 				else if(redRock == true){
 					redRock = false;
-					SORTING_MOTOR.move_absolute(-55, 100);
+					SORTING_MOTOR.move_absolute(-50, 95);
 					pros::delay(600);
 					SORTING_MOTOR.move_absolute(0, 130);
 					pros::delay(200);
@@ -103,8 +101,8 @@ void sortingTask() {
 			pros::delay(10);
 		}
 		else{
-			SORTING_MOTOR.move_absolute(0, 140);
-			pros::delay(10);
+			if(OPTICAL_SENSOR.get_led_pwm() == 50) OPTICAL_SENSOR.set_led_pwm(0);
+			pros::delay(2);
 		}
 	}
 }
@@ -154,14 +152,14 @@ void rollerTask(){
  */
 void initialize() {
 	pros::lcd::initialize();
-	pros::lcd::set_text(0, "[Players gonna Play:]");
-	pros::lcd::set_text(1, "1. Caven");
-	pros::lcd::set_text(1, "2. Amanda");
-	pros::lcd::set_text(1, "3. Ojas");
-	pros::lcd::set_text(1, "4. Zheng Hong");
-	pros::lcd::set_background_color(255,125,0);
+	pros::lcd::set_text(0, "[Suckers gonna Suck]");
+	pros::lcd::set_text(1, "1. John Chai");
+	pros::lcd::set_text(2, "2. Nawawi");
+	pros::lcd::set_text(3, "3. Cheng Yi");
+	pros::lcd::set_text(4, "4. Hans");
+	pros::lcd::set_background_color(0,128,128);
 	pros::lcd::set_text_color(LV_COLOR_BLACK);
-	
+
 	OPTICAL_SENSOR.disable_gesture();
 
 	LEFT_MOTOR_FRONT.set_zero_position(0);
@@ -229,7 +227,7 @@ void full_brake(){
 	RIGHT_MOTOR_FRONT.brake();
 	LEFT_MOTOR_REAR.brake();
 	RIGHT_MOTOR_REAR.brake();
-	pros::delay(2);
+	pros::delay(1);
 }
 
 /*void print_screen(){
@@ -243,7 +241,6 @@ void full_brake(){
 }*/
 
 void opcontrol() {
-	bool tankdrive = false;
 	master.clear();
 	pros::delay(50);
 	master.print(0,0,"%s","Y:Alliance,X:Sorter");
@@ -254,23 +251,23 @@ void opcontrol() {
 	pros::delay(50);
 	master.print(2,10,"[Ally: %s]",blue_alliance ? "Blue":"Red ");
 	EVAC_MOTOR.tare_position();
-	int evac_velocity = 160;
 
 	while (true) {
 		Top_Roller_State = (master.get_digital(DIGITAL_R1) - master.get_digital(DIGITAL_R2));
 		
 		Btm_Roller_State = (master.get_digital(DIGITAL_L1) - master.get_digital(DIGITAL_L2));
 		
-		//EVAC_MOTOR.move_velocity(((master.get_digital(DIGITAL_UP) - master.get_digital(DIGITAL_DOWN)) * evac_velocity));
-		if(master.get_digital_new_press(DIGITAL_UP)) EVAC_MOTOR.move_absolute(1200, 190);
-		if(master.get_digital_new_press(DIGITAL_DOWN)) EVAC_MOTOR.move_absolute(0, 35);
+		//EVAC_MOTOR.move_absolute((master.get_digital(DIGITAL_UP) - master.get_digital(DIGITAL_DOWN)) * powerevac);
+		if(master.get_digital_new_press(DIGITAL_UP)) EVAC_MOTOR.move_absolute(1500, 130);
+
+		if(master.get_digital_new_press(DIGITAL_DOWN)) EVAC_MOTOR.move_absolute(0, 125);
+
 		if(master.get_digital_new_press(DIGITAL_X)){
 			sorting_enable = !sorting_enable;
-			if(sorting_enable){
-				OPTICAL_SENSOR.set_led_pwm(50);
-			}
+			if(sorting_enable) OPTICAL_SENSOR.set_led_pwm(50);
 			else OPTICAL_SENSOR.set_led_pwm(0);
 			master.print(2,0,"[Sort: %s]", sorting_enable ? "On ":"Off");
+			pros::delay(10);
 		}
 
 		if(master.get_digital_new_press(DIGITAL_Y)){
@@ -286,23 +283,22 @@ void opcontrol() {
 			SORTING_MOTOR.move((master.get_digital(DIGITAL_LEFT) - master.get_digital(DIGITAL_RIGHT))*20);
 		}
 		/*ARCADE DRIVE*/
-		/*
 		int power = master.get_analog(ANALOG_LEFT_Y);
 		int turn = master.get_analog(ANALOG_RIGHT_X);
 		LEFT_MOTOR_FRONT.move(power + turn);
 		LEFT_MOTOR_REAR.move(power + turn);
 		RIGHT_MOTOR_FRONT.move(power - turn);
 		RIGHT_MOTOR_REAR.move(power - turn);
-		*/
 
 		/*TANK DRIVE*/
+		/*
 		int powerLeft = master.get_analog(ANALOG_LEFT_Y);
 		int powerRight = master.get_analog(ANALOG_RIGHT_Y);
 		LEFT_MOTOR_FRONT = powerLeft;
 		LEFT_MOTOR_REAR = powerLeft;
 		RIGHT_MOTOR_FRONT = powerRight;
 		RIGHT_MOTOR_REAR = powerRight;
-		
+		*/
 		pros::delay(5);
 		//print_screen();
 	}
